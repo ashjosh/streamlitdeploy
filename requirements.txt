@@ -1,0 +1,10 @@
+streamlit
+crewai
+langchain-openai
+langchain-community
+faiss-cpu
+pypdf
+requests
+openai
+
+
