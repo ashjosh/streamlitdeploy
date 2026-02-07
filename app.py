@@ -330,6 +330,23 @@ def download_and_index_pdf(url_or_file, is_url: bool = False):
             os.remove(temp_filepath)
 
 
+
+
+def is_mostly_hindi(text: str, threshold: float = 0.18) -> bool:
+    """
+    Heuristic Hindi detector using Devanagari character ratio.
+    A low threshold is used so technical English terms can still appear.
+    """
+    if not text:
+        return False
+
+    letters = [ch for ch in text if ch.isalpha()]
+    if not letters:
+        return False
+
+    devanagari_count = sum(1 for ch in letters if "ऀ" <= ch <= "ॿ")
+    return (devanagari_count / len(letters)) >= threshold
+
 def reset_app_state_callback():
     """Resets chat history and clears the concept input value."""
     st.session_state.chat_history = []
@@ -487,10 +504,10 @@ def main_app():
 
                 summarizer_agent = Agent(
                     role="Concept Explainer and Summarizer",
-                    goal="Synthesize retrieved content into a clear, concise explanation with sources.",
+                    goal="Synthesize retrieved content into a clear, concise Hindi explanation with sources.",
                     backstory=(
                         "You are a researcher-tutor. You take raw RAG chunks, remove redundancy, and explain "
-                        "the concept clearly. Always include 'Sources Used' with paper names and page numbers."
+                        "the concept clearly in Hindi. Always include 'Sources Used' with paper names and page numbers."
                     ),
                     verbose=False,
                     allow_delegation=False,
@@ -508,11 +525,12 @@ def main_app():
 
                 summarizer_task = Task(
                     description=(
-                        f"Using the raw results, explain the concept '{concept}' clearly. "
+                        f"Using the raw results, explain the concept '{concept}' clearly in Hindi (Devanagari script). "
+                        "Keep technical terms accurate, but the narration should be Hindi. "
                         "Provide a structured answer and end with 'Sources Used:' listing all papers + page numbers."
                     ),
                     expected_output=(
-                        "A clear explanation + bullet points + 'Sources Used:' section with paper/page citations."
+                        "A clear Hindi explanation + bullet points + 'Sources Used:' section with paper/page citations."
                     ),
                     agent=summarizer_agent,
                     context=[retriever_task]
@@ -535,9 +553,17 @@ def main_app():
                             "concept": concept,
                             "concept_input_main": concept
                         })
+                        result_text = str(result)
+
+                        if not is_mostly_hindi(result_text):
+                            result_text += (
+                                "\n\n⚠️ **Language Check:** Response may not be mostly Hindi. "
+                                "Please re-run or refine your prompt."
+                            )
+
                         st.session_state.chat_history.append({
                             "role": "assistant",
-                            "content": str(result)
+                            "content": result_text
                         })
                     except Exception as e:
                         st.session_state.chat_history.append({
