@@ -2,10 +2,10 @@
 ====================================================================================
 Purpose        : Agentic RAG Streamlit Application — Multi-Document Concept Explainer
 File Name      : app.py
-Author         : Vinay Kumar
+Author         : Ashish Joshi
 Organization   : QC
-Date Developed : 2025-10-27
-Last Modified  : 2026-02-01
+Date Developed : 2026-01-27
+Last Modified  : 2026-02-07
 Version        : 1.0.2
 Python Version : 3.12
 Framework      : Streamlit
