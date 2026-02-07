@@ -165,8 +165,8 @@ def init_session_state():
     if "embedder" not in st.session_state:
         st.session_state.embedder = None
 
-    if "uploaded_files_cache" not in st.session_state:
-        st.session_state.uploaded_files_cache = []
+    if "processed_upload_names" not in st.session_state:
+        st.session_state.processed_upload_names = set()
 
     if "concept_input_main" not in st.session_state:
         st.session_state.concept_input_main = ""
@@ -264,18 +264,18 @@ def setup_llm_and_tools():
         return None
 
 
-def download_and_index_pdf(url_or_file, is_url: bool = False):
+def download_and_index_pdf(url_or_file, is_url: bool = False) -> bool:
     """Downloads or saves a PDF and indexes it using LangChain/FAISS."""
     openai_key = st.session_state.api_keys.get("openai", "").strip()
     embedder = st.session_state.get("embedder")
 
     if not openai_key or not embedder:
         st.error("Cannot index document: Please click 'Initialize Agents and Tools' first.")
-        return
+        return False
 
     if len(st.session_state.indexed_docs) >= st.session_state.max_docs:
         st.error(f"Cannot upload more than {st.session_state.max_docs} documents.")
-        return
+        return False
 
     temp_filepath = os.path.join(st.session_state.temp_dir, f"{uuid.uuid4()}.pdf")
 
@@ -323,11 +323,13 @@ def download_and_index_pdf(url_or_file, is_url: bool = False):
             })
 
         st.success(f"Successfully indexed: **{display_name}** using In-Memory Vector Store (FAISS).")
+        return True
 
     except Exception as e:
         st.error(f"Failed to index document. Check URL, file format, or API key. Error: {e}")
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
+        return False
 
 
 
@@ -410,15 +412,15 @@ def main_app():
             )
 
             if uploaded_files:
-                cached_names = [f.name for f in st.session_state.uploaded_files_cache]
-                new_files = [f for f in uploaded_files if f.name not in cached_names]
+                new_files = [f for f in uploaded_files if f.name not in st.session_state.processed_upload_names]
+                indexed_any = False
 
                 for f in new_files:
-                    download_and_index_pdf(f, is_url=False)
+                    if download_and_index_pdf(f, is_url=False):
+                        st.session_state.processed_upload_names.add(f.name)
+                        indexed_any = True
 
-                st.session_state.uploaded_files_cache = uploaded_files
-
-                if new_files:
+                if indexed_any:
                     st.rerun()
 
             with st.form("url_form", clear_on_submit=True):
