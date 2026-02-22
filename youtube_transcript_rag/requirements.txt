@@ -1,0 +1,8 @@
+streamlit
+langchain-openai
+langchain-community
+faiss-cpu
+requests
+openai
+tiktoken
+youtube-transcript-api
